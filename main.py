@@ -11,6 +11,7 @@ FIXTURE = TrumpPost("fixture-001", "We are considering major tariffs on European
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--fixture", action="store_true")
+    p.add_argument("--send-fixture", action="store_true")
     a = p.parse_args()
 
     seen = load_ids()
@@ -39,7 +40,7 @@ def main():
         message = format_alert(post, result)
         print(message)
 
-        if not a.fixture and os.environ.get("TELEGRAM_BOT_TOKEN") and alerts_sent < max_alerts_per_run:
+        if (not a.fixture or a.send_fixture) and os.environ.get("TELEGRAM_BOT_TOKEN") and alerts_sent < max_alerts_per_run:
             send_telegram(message)
             alerts_sent += 1
             time.sleep(1.2)
