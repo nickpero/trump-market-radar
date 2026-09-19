@@ -2,6 +2,12 @@ name: TRUMP MARKET RADAR
 
 on:
   workflow_dispatch:
+    inputs:
+      test_fixture:
+        description: "Invia un alert Telegram di test"
+        required: true
+        default: false
+        type: boolean
   schedule:
     - cron: "*/5 * * * *"
 
@@ -22,7 +28,12 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TRUMP_SOURCE_URL: https://trumpstruth.org/feed
-        run: python main.py
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.test_fixture }}" = "true" ]; then
+            python main.py --fixture --send-fixture
+          else
+            python main.py
+          fi
       - name: Save deduplication state
         run: |
           git config user.name "github-actions[bot]"
