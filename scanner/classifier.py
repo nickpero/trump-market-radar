@@ -12,7 +12,7 @@ class Classification:
 RULES = {
     "TARIFFS": {"keywords": ["tariff", "tariffs", "duty", "duties", "trade war", "import tax"], "assets": ["SPY", "QQQ", "EUR/USD", "GLD"]},
     "ENERGY": {"keywords": ["oil", "crude", "opec", "energy", "gasoline", "lng", "natural gas"], "assets": ["USO", "XLE", "GLD"]},
-    "FED_RATES": {"keywords": ["fed", "federal reserve", "interest rate", "interest rates", "rates", "powell"], "assets": ["QQQ", "SPY", "TLT", "GLD"]},
+    "FED_RATES": {"keywords": ["federal reserve", "fed chair", "fed chief", "interest rate", "interest rates", "interest-rate", "rate cut", "rate hike", "rate cuts", "rate hikes", "monetary policy", "fomc", "federal funds rate", "powell"], "assets": ["QQQ", "SPY", "TLT", "GLD"]},
     "CHINA": {"keywords": ["china", "chinese", "beijing"], "assets": ["QQQ", "SPY", "GLD", "EUR/USD"]},
     "GEOPOLITICS": {"keywords": ["iran", "israel", "ukraine", "russia", "war", "ceasefire", "nato", "military", "missile", "troops"], "assets": ["SPY", "GLD", "USO", "TLT"]},
     "CRYPTO": {"keywords": ["bitcoin", "crypto", "cryptocurrency", "btc", "ethereum"], "assets": ["BTC"]},
@@ -29,7 +29,9 @@ MARKET_ACTION_TERMS = [
     "tariff", "tariffs", "duty", "duties", "sanction", "sanctions", "ban",
     "deal", "agreement", "ceasefire", "peace", "attack", "strike", "troops",
     "oil", "crude", "opec", "gasoline", "lng", "natural gas",
-    "fed", "federal reserve", "interest rate", "interest rates", "powell",
+    "federal reserve", "fed chair", "fed chief", "interest rate", "interest rates",
+    "rate cut", "rate hike", "rate cuts", "rate hikes", "monetary policy",
+    "fomc", "federal funds rate", "powell",
     "rates", "china", "beijing", "bitcoin", "crypto", "ethereum",
     "military", "missile",
 ]
@@ -40,7 +42,6 @@ def classify(text: str) -> Classification:
     if any(pattern in low for pattern in NON_MARKET_PATTERNS):
         return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "Non-market political endorsement")
 
-    # Generic references to geopolitical places are not enough by themselves.
     matches = []
     for category, rule in RULES.items():
         hits = [kw for kw in rule["keywords"] if kw in low]
@@ -50,8 +51,21 @@ def classify(text: str) -> Classification:
     if not matches:
         return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No market keyword detected")
 
-    # Require explicit market-impact/action language. This suppresses posts that
-    # merely mention countries or political themes in passing.
+    # FED_RATES requires explicit monetary-policy context.
+    # A standalone "fed" is deliberately NOT a trigger: it often appears
+    # inside unrelated words such as "federal" or in media/source text.
+    if "FED_RATES" in [m[0] for m in matches]:
+        fed_context = any(term in low for term in [
+            "federal reserve", "fed chair", "fed chief", "interest rate",
+            "interest rates", "interest-rate", "rate cut", "rate hike",
+            "rate cuts", "rate hikes", "monetary policy", "fomc",
+            "federal funds rate", "powell"
+        ])
+        if not fed_context:
+            matches = [m for m in matches if m[0] != "FED_RATES"]
+            if not matches:
+                return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
+
     if not any(term in low for term in MARKET_ACTION_TERMS):
         return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
 
@@ -61,6 +75,6 @@ def classify(text: str) -> Classification:
     pos = any(x in low for x in ["deal", "agreement", "ceasefire", "peace", "cut", "lower", "reduction"])
 
     direction = "NEGATIVE" if neg and not pos else "POSITIVE" if pos and not neg else "MIXED"
-    priority = "HIGH" if len(hits) >= 2 or any(x in low for x in ["war", "tariff", "tariffs", "ceasefire", "fed", "interest rate"]) else "MEDIUM"
+    priority = "HIGH" if len(hits) >= 2 or any(x in low for x in ["war", "tariff", "tariffs", "ceasefire", "federal reserve", "interest rate", "rate cut", "rate hike", "fomc", "powell"]) else "MEDIUM"
 
     return Classification(True, category, direction, priority, assets, "Matched: " + ", ".join(hits))
