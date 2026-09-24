@@ -4,7 +4,7 @@ import time
 from scanner.alerts import format_alert, send_telegram
 from scanner.classifier import classify
 from scanner.trump_source import TrumpPost, fetch_posts
-from scanner.state import load_ids, save_ids
+from scanner.state import canonical_post_id, load_ids, save_ids
 
 FIXTURE = TrumpPost("fixture-001", "We are considering major tariffs on European imports. We will make a decision soon.", "2026-01-01T12:00:00Z")
 
@@ -18,8 +18,6 @@ def main():
     posts = [FIXTURE] if a.fixture else fetch_posts(os.environ.get("TRUMP_SOURCE_URL", ""))
     posts = posts[:100]
 
-    # On the first live run, do not replay the entire historical feed into Telegram.
-    # We seed the baseline and inspect only the newest post.
     bootstrap = not seen
     candidates = posts[:1] if bootstrap else posts
 
@@ -28,10 +26,12 @@ def main():
     max_alerts_per_run = 3
 
     for post in candidates:
-        if post.post_id in seen:
+        event_id = canonical_post_id(post.post_id, post.text)
+        if post.post_id in seen or event_id in seen:
             continue
 
         new_ids.add(post.post_id)
+        new_ids.add(event_id)
         result = classify(post.text)
 
         if not result.relevant:
@@ -45,10 +45,10 @@ def main():
             alerts_sent += 1
             time.sleep(1.2)
 
-    # During bootstrap, mark the entire current feed as seen so old posts
-    # are never replayed on the next scheduled run.
     if bootstrap:
-        new_ids.update(post.post_id for post in posts)
+        for post in posts:
+            new_ids.add(post.post_id)
+            new_ids.add(canonical_post_id(post.post_id, post.text))
 
     save_ids(new_ids)
 
