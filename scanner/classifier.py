@@ -25,6 +25,19 @@ NON_MARKET_PATTERNS = [
     "will never let you down",
 ]
 
+TARIFF_ACTION_PATTERNS = [
+    "impose tariff", "impose tariffs", "imposing tariff", "imposing tariffs",
+    "raise tariff", "raise tariffs", "raising tariff", "raising tariffs",
+    "increase tariff", "increase tariffs", "increasing tariff", "increasing tariffs",
+    "new tariff", "new tariffs", "additional tariff", "additional tariffs",
+    "higher tariff", "higher tariffs", "tariff will", "tariffs will",
+    "tariff on", "tariffs on", "duty on", "duties on",
+    "remove tariff", "remove tariffs", "lower tariff", "lower tariffs",
+    "cut tariff", "cut tariffs", "reduce tariff", "reduce tariffs",
+    "tariff exemption", "tariff exemptions", "tariff deadline", "tariff deal",
+    "tariff agreement", "reciprocal tariff", "reciprocal tariffs",
+]
+
 MARKET_ACTION_TERMS = [
     "tariff", "tariffs", "duty", "duties", "sanction", "sanctions", "ban",
     "deal", "agreement", "ceasefire", "peace", "attack", "strike", "troops",
@@ -66,7 +79,7 @@ def classify(text: str) -> Classification:
             if not matches:
                 return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
 
-    if not any(term in low for term in MARKET_ACTION_TERMS):
+    # A mention of tariffs is not enough; require concrete tariff action/change.\n    if "TARIFFS" in [m[0] for m in matches] and not any(p in low for p in TARIFF_ACTION_PATTERNS):\n        matches = [m for m in matches if m[0] != "TARIFFS"]\n\n    if not matches:\n        return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")\n\n    if not any(term in low for term in MARKET_ACTION_TERMS) and not any(p in low for p in TARIFF_ACTION_PATTERNS):
         return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
 
     category, hits, assets = max(matches, key=lambda x: len(x[1]))
