@@ -79,7 +79,14 @@ def classify(text: str) -> Classification:
             if not matches:
                 return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
 
-    # A mention of tariffs is not enough; require concrete tariff action/change.\n    if "TARIFFS" in [m[0] for m in matches] and not any(p in low for p in TARIFF_ACTION_PATTERNS):\n        matches = [m for m in matches if m[0] != "TARIFFS"]\n\n    if not matches:\n        return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")\n\n    if not any(term in low for term in MARKET_ACTION_TERMS) and not any(p in low for p in TARIFF_ACTION_PATTERNS):
+    # A mention of tariffs is not enough; require concrete tariff action/change.
+    if "TARIFFS" in [m[0] for m in matches] and not any(p in low for p in TARIFF_ACTION_PATTERNS):
+        matches = [m for m in matches if m[0] != "TARIFFS"]
+
+    if not matches:
+        return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
+
+    if not any(term in low for term in MARKET_ACTION_TERMS) and not any(p in low for p in TARIFF_ACTION_PATTERNS):
         return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
 
     category, hits, assets = max(matches, key=lambda x: len(x[1]))
