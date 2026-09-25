@@ -38,6 +38,19 @@ TARIFF_ACTION_PATTERNS = [
     "tariff agreement", "reciprocal tariff", "reciprocal tariffs",
 ]
 
+CHINA_ACTION_PATTERNS = [
+    "tariff", "tariffs", "duty", "duties", "trade deal", "trade agreement",
+    "trade war", "sanction", "sanctions", "export control", "export controls",
+    "import restriction", "import restrictions", "export restriction", "export restrictions",
+    "chip restriction", "chip restrictions", "semiconductor", "semiconductors",
+    "artificial intelligence", "ai chip", "ai chips", "technology ban",
+    "investment restriction", "investment restrictions", "yuan", "renminbi",
+    "currency", "taiwan", "taiwan strait", "military exercise", "military exercises",
+    "blockade", "embargo", "decouple", "decoupling", "supply chain",
+    "rare earth", "rare earths", "negotiation", "negotiations", "agreement",
+    "deal", "ban", "restrict", "restriction", "restrictions",
+]
+
 MARKET_ACTION_TERMS = [
     "tariff", "tariffs", "duty", "duties", "sanction", "sanctions", "ban",
     "deal", "agreement", "ceasefire", "peace", "attack", "strike", "troops",
@@ -78,6 +91,14 @@ def classify(text: str) -> Classification:
             matches = [m for m in matches if m[0] != "FED_RATES"]
             if not matches:
                 return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
+
+    # CHINA requires concrete economic, trade, technology, currency or security action.
+    # A visit, ceremony, dinner, tour or generic mention of China is not enough.
+    if "CHINA" in [m[0] for m in matches] and not any(p in low for p in CHINA_ACTION_PATTERNS):
+        matches = [m for m in matches if m[0] != "CHINA"]
+
+    if not matches:
+        return Classification(False, "OTHER", "UNKNOWN", "LOW", [], "No actionable market-impact language detected")
 
     # A mention of tariffs is not enough; require concrete tariff action/change.
     if "TARIFFS" in [m[0] for m in matches] and not any(p in low for p in TARIFF_ACTION_PATTERNS):
